@@ -19,7 +19,7 @@ module Aries
 
   def self.valid? commands
     commands.keys.each do |k|
-      if ! ["puts", "find"].include? k
+      if ! ["add", "find"].include? k
         return [nil, "Undefined command key #{k}"]
       end
 

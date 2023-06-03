@@ -1,4 +1,5 @@
 require "csv"
+require "erb"
 require "json"
 
 module Aries
@@ -28,30 +29,44 @@ module Aries
       add eav['entity'], eav['attribute'], eav['value']
     end
 
-    def find criteria
+    def find criteria, all=true
       check = lambda do |row, criteria|
         criteria.keys.each do |k|
-          if row[k].nil?
-            return false
+          if k == "check"
+            entity, attribute, value = [row['entity'], row['attribute'], row['value']]
+            return ERB.new(criteria[k]).result(binding) == 'true'
           end
 
-          if JSON.parse(row[k]) != criteria[k]
-            return false
+          val = row[k].nil? ? nil : JSON.parse(row[k])
+
+          if criteria[k].nil? && (val.nil? || val.to_s.blank?)
+            return true
           end
 
-          return true
+          if val == criteria[k]
+            return true
+          end
+            
+          return false
         end
       end
 
-      hit = nil
+      hits = []
       (CSV.read @path, headers: true).reverse_each do |row|
         if check.call row, criteria
-          hit = row
+          hits.push row.to_h
+          
+          if ! all
           break
+          end
         end
       end
-
-      return hit
+      
+      return hits
+    end
+    
+    def first criteria
+      find criteria, false
     end
 
   end

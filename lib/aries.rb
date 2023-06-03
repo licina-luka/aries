@@ -18,14 +18,16 @@ module Aries
   end
 
   def self.valid? commands
-    commands.keys.each do |k|
-      if ! ["add", "find"].include? k
-        return [nil, "Undefined command key #{k}"]
-      end
+    for command in commands
+      command.keys.each do |k|
+        if ! ["add", "find", "first"].include? k
+          return [nil, "Undefined command key '#{k}'"]
+        end
 
-      commands[k].keys.each do |col|
-        if ! ["entity", "attribute", "value"].include? col
-          return [nil, "Undefined column #{col}"]
+        command[k].keys.each do |col|
+          if ! ["entity", "attribute", "value", "check"].include? col
+            return [nil, "Undefined column '#{col}'"]
+          end
         end
       end
     end
@@ -49,14 +51,14 @@ module Aries
       commands, err = action -> { JSON.parse commands }
 
       if ! err.nil?
-        client.puts err
+        client.puts JSON.generate(err: err)
         next
       end
 
       _, err = valid? commands
 
       if ! err.nil?
-        client.puts err
+        client.puts JSON.generate(err: err)
         next
       end
 
@@ -65,11 +67,16 @@ module Aries
       results = {}
       commands.each_with_index do |command, idx|
         
-        func, vals = command
-        results[command] = db.send(func, vals)
+        func, vals = command.to_a.first
+        begin
+          results[idx] = db.send(func, vals)
+        rescue => e
+          results = {err: e}
+          break
+        end
       end
 
-      client.puts results
+      client.puts JSON.generate(results)
     end
 
     client.close

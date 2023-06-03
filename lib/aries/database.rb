@@ -31,24 +31,24 @@ module Aries
 
     def find criteria, all=true
       check = lambda do |row, criteria|
+        hit = true
         criteria.keys.each do |k|
           if k == "check"
             entity, attribute, value = [row['entity'], row['attribute'], row['value']]
-            return ERB.new(criteria[k]).result(binding) == 'true'
+            hit = hit && ERB.new(criteria[k]).result(binding) == 'true'
           end
 
-          val = row[k].nil? ? nil : JSON.parse(row[k])
-
-          if criteria[k].nil? && (val.nil? || val.to_s.blank?)
-            return true
+          begin
+            val = JSON.parse row[k]
+          rescue
+            val = row[k]
           end
 
-          if val == criteria[k]
-            return true
-          end
-            
-          return false
+          hit = hit && criteria[k].nil? && (val.nil? || val.to_s.empty?)
+          hit = hit && val.nil? || val == criteria[k]
         end
+
+        return hit
       end
 
       hits = []
